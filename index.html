@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Typing Test – 5 Minutes</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8 url('https://i.ibb.co/NgrVGPgq/PCTC-LOGO2.png') no-repeat;
+      padding: 40px;
+      color: #333;
+    }
+    h1 { text-align: center; }
+    input, select {
+      padding: 8px;
+      font-size: 16px;
+      margin: 5px;
+      width: calc(50% - 10px);
+    }
+    #test-text {
+      background: #fff;
+      border: 2px solid #ccc;
+      padding: 20px;
+      border-radius: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+    #input-area {
+      width: 100%;
+      height: 150px;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 2px solid #ccc;
+      resize: none;
+    }
+    #timer, #stats, #wpm {
+      font-size: 18px;
+      margin: 10px 0;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+    .correct-char { color: green; }
+    .incorrect-char { color: red; background-color: #ffe6e6; }
+    #summary-modal, #leaderboard-modal {
+      display: none;
+      position: fixed;
+      top: 25%;
+      left: 50%;
+      transform: translate(-50%, -25%);
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      z-index: 999;
+      max-width: 400px;
+      width: 90%;
+    }
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      z-index: 998;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      text-align: center;
+      font-size: 14px;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+<body>
+<audio id="bell-sound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_5764f8cf82.mp3" preload="auto"></audio>
+
+<h1>PETRA COMPUTER TRAINING CENTRE</h1>
+<h1>Typing Test – 5 Minutes (200 Words)</h1>
+
+<select id="passage-select">
+  <option value="">-- Select Passage --</option>
+  <option value="1">Passage 1 – Elmridge Morning</option>
+  <option value="2">Passage 2 – Forest Adventure</option>
+  <option value="3">Passage 3 – City Life</option>
+</select><br>
+
+<input id="student-name" type="text" placeholder="Student Name" required />
+<input id="roll-no" type="text" placeholder="Roll Number" required />
+
+<div id="test-text"></div>
+<textarea id="input-area" placeholder="Start typing here..." oninput="checkTyping()" disabled></textarea>
+
+<div id="timer">Time left: 300s</div>
+<div id="stats">Words: 0 | Errors: 0</div>
+<div id="wpm">WPM: 0</div>
+
+<button onclick="startTest()">Start Test</button>
+<button id="export-btn" onclick="exportPDF()" disabled>Export Result as PDF</button>
+<button onclick="showLeaderboard()">Leaderboard</button>
+<button onclick="clearLeaderboard()">🧹 Clear Leaderboard</button>
+<button onclick="window.location.href='admin.html'">👨‍🏫 Admin Dashboard</button>
+
+<div id="overlay" onclick="closeModals()"></div>
+<div id="summary-modal">
+  <h2>⏱️ Typing Summary</h2>
+  <p id="summary"></p>
+  <button onclick="closeModals()">Close</button>
+</div>
+<div id="leaderboard-modal">
+  <h2>🏆 Leaderboard</h2>
+  <table id="leaderboard-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Words</th>
+        <th>Errors</th>
+        <th>Accuracy</th>
+        <th>Time (s)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <button onclick="closeModals()">Close</button>
+</div>
+
+<script>
+  const passages = {
+    1: `Every morning, the sun rose quietly behind the hills, casting golden light across the fields. Birds chirped in the trees, filling the air with a soft melody that welcomed the new day. Dew glistened on blades of grass, and a gentle breeze carried the scent of blooming flowers. Farmers began their day early, tending to their crops and guiding cattle through the pastures. Children walked briskly to school, their laughter echoing through the narrow village paths.In the small marketplace, vendors set up their stalls, arranging fruits, vegetables, and handmade goods with care. The rhythm of daily life had a peaceful charm, unhurried yet purposeful. Dogs barked playfully, and the old clock tower struck seven, marking the official start of the town's bustling morning.By mid-morning, sunlight bathed every corner of the valley, and the community was alive with energy. Women gathered by the well, sharing stories and laughter, while elders sat on wooden benches, sipping tea and watching the world go by. Life here moved in harmony with nature—simple, yet deeply fulfilling. As the sun climbed higher, the promise of a new day lingered in the warm air, inviting everyone to embrace its potential with open hearts.`,
+    2: `Deep in the forest, a boy named Theo wandered beneath ancient trees. Leaves crunched underfoot, and the scent of pine filled the air. Shafts of sunlight pierced through the thick canopy, creating patches of gold on the forest floor. Theo moved quietly, his eyes wide with wonder as birds flitted between branches and squirrels darted through the underbrush. He carried a small satchel filled with maps and a worn notebook where he scribbled observations. Every rustle and chirp fascinated him. He paused near a moss-covered log, watching a line of ants march in perfect rhythm. Nature, in all its wild beauty, felt like home to Theo.Further along, he came upon a crystal-clear stream. Kneeling beside it, he cupped the cold water in his hands and took a sip, refreshed by its purity. Across the stream, he spotted deer grazing peacefully, their ears twitching but unafraid. Theo wasn't just exploring—he was learning, breathing in stories the forest whispered through rustling leaves and creaking bark. As the sun began its descent, he turned back toward home, heart full and mind buzzing with discovery. The forest was his classroom, and every step taught him something new about the world and himself.`,
+    3: `The city awoke with honking horns and bustling footsteps. Street vendors opened stalls, the aroma of spicy food drifting through the early morning air. Steam rose from carts selling tea and breakfast snacks, while shopkeepers swept their doorsteps in preparation for a busy day. Buses rumbled down crowded roads, collecting commuters dressed in crisp shirts and hurried expressions. Sidewalks overflowed with life - children in uniforms laughed on their way to school, delivery boys zipped past on bikes, and elderly folks sat on benches, sipping hot drinks and watching the city come alive. The rhythm of footsteps and distant chatter created a hum that only a city could produce. Above the chaos, pigeons perched on balconies and electric wires, cooing softly as they observed the human tide below. Billboards flashed advertisements in bright colors, and traffic lights blinked their commands to impatient drivers. 
+By mid-morning, office buildings gleamed in the sunlight, filled with the tapping of keyboards and ringing phones. Despite the noise, the city had a pulse—a unique energy that never truly slept. Amid the crowds and concrete, life moved forward, each person playing their part in the great, unending story of the city that never slowed down.`
+  };
+
+  const inputArea = document.getElementById('input-area');
+  const testTextDiv = document.getElementById('test-text');
+  const timerDisplay = document.getElementById('timer');
+  const statsDisplay = document.getElementById('stats');
+  const wpmDisplay = document.getElementById('wpm');
+  const summaryModal = document.getElementById('summary-modal');
+  const leaderboardModal = document.getElementById('leaderboard-modal');
+  const summary = document.getElementById('summary');
+  const leaderboardBody = document.querySelector('#leaderboard-table tbody');
+  const overlay = document.getElementById('overlay');
+
+  let interval = null;
+  let timeLimit = 300;
+  let startTime = null;
+
+  function displayTestText(highlight = '') {
+    const selectedPassage = document.getElementById('passage-select').value;
+    const originalText = passages[selectedPassage] || '';
+    let result = '';
+    for (let i = 0; i < originalText.length; i++) {
+      const typedChar = highlight[i];
+      if (typedChar == null) result += originalText[i];
+      else if (typedChar === originalText[i]) result += `<span class="correct-char">${originalText[i]}</span>`;
+      else result += `<span class="incorrect-char">${originalText[i]}</span>`;
+    }
+    testTextDiv.innerHTML = result;
+  }
+
+  function startTest() {
+    const name = document.getElementById('student-name').value.trim();
+    const roll = document.getElementById('roll-no').value.trim();
+    const selectedPassage = document.getElementById('passage-select').value;
+
+    if (!selectedPassage) return alert("Please select a passage before starting.");
+    if (!name || !roll) return alert("Please enter both Student Name and Roll Number.");
+
+    inputArea.disabled = false;
+    inputArea.value = '';
+    inputArea.focus();
+    displayTestText();
+    startTime = Date.now();
+    let timeLeft = timeLimit;
+
+    interval = setInterval(() => {
+      timeLeft--;
+      timerDisplay.innerText = `Time left: ${timeLeft}s`;
+      if (timeLeft <= 0) {
+        clearInterval(interval);
+        inputArea.disabled = true;
+        showSummary();
+        document.getElementById('export-btn').disabled = false;
+      }
+    }, 1000);
+  }
+
+  function checkTyping() {
+    const selectedPassage = document.getElementById('passage-select').value;
+    const originalText = passages[selectedPassage];
+    const typed = inputArea.value;
+
+    let errors = 0;
+    for (let i = 0; i < typed.length; i++) {
+      if (typed[i] !== originalText[i]) errors++;
+    }
+    const wordsTyped = typed.trim().split(/\s+/).filter(w => w).length;
+    const elapsed = (Date.now() - startTime) / 1000;
+    const wpm = elapsed > 0 ? Math.round((wordsTyped / elapsed) * 60) : 0;
+
+    statsDisplay.innerText = `Words: ${wordsTyped} | Errors: ${errors}`;
+    wpmDisplay.innerText = `WPM: ${wpm}`;
+    displayTestText(typed);
+  }
+
+  function showSummary() {
+    const selectedPassage = document.getElementById('passage-select').value;
+    const originalText = passages[selectedPassage];
+    const typed = inputArea.value;
+    const wordsTyped = typed.trim().split(/\s+/).filter(w => w).length;
+
+    let errors = 0;
+    for (let i = 0; i < typed.length; i++) {
+      if (typed[i] !== originalText[i]) errors++;
+    }
+
+    const accuracy = ((typed.length - errors) / typed.length) * 100 || 0;
+    const elapsedTime = (Date.now() - startTime) / 1000;
+    const wpm = elapsedTime > 0 ? Math.round((wordsTyped / elapsedTime) * 60) : 0;
+
+    summary.innerHTML = `
+      <strong>Words Typed:</strong> ${wordsTyped}<br>
+      <strong>Errors:</strong> ${errors}<br>
+      <strong>Accuracy:</strong> ${accuracy.toFixed(2)}%<br>
+      <strong>WPM:</strong> ${wpm}<br>
+      <strong>Time Taken:</strong> ${Math.min(elapsedTime, timeLimit).toFixed(1)}s
+    `;
+    overlay.style.display = 'block';
+    summaryModal.style.display = 'block';
+    document.getElementById('bell-sound').play();
+
+    if (accuracy >= 95 && wpm >= 40) confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
+
+    const record = {
+      time: new Date().toLocaleString(),
+      words: wordsTyped,
+      errors,
+      accuracy: parseFloat(accuracy.toFixed(2)),
+      duration: Math.min(elapsedTime, timeLimit).toFixed(1)
+    };
+    const leaderboard = JSON.parse(localStorage.getItem('typing_leaderboard') || '[]');
+    leaderboard.push(record);
+    leaderboard.sort((a, b) => b.accuracy - a.accuracy || b.words - a.words || new Date(b.time) - new Date(a.time));
+    localStorage.setItem('typing_leaderboard', JSON.stringify(leaderboard));
+  }
+
+  function exportPDF() {
+    const { jsPDF } = window.jspdf;
+    const name = document.getElementById('student-name').value || 'Unknown';
+    const roll = document.getElementById('roll-no').value || 'N/A';
+    const selectedPassage = document.getElementById('passage-select').value;
+    const originalText = passages[selectedPassage];
+    const typed = inputArea.value;
+    const wordsTyped = typed.trim().split(/\s+/).filter(w => w).length;
+
+    let errors = 0;
+    for (let i = 0; i < typed.length; i++) {
+      if (typed[i] !== originalText[i]) errors++;
+    }
+
+    const accuracy = ((typed.length - errors) / typed.length) * 100 || 0;
+    const elapsedTime = (Date.now() - startTime) / 1000;
+    const wpm = elapsedTime > 0 ? Math.round((wordsTyped / elapsedTime) * 60) : 0;
+
+    let marks = 0;
+    if (accuracy < 70) marks = 0;
+    else if (wpm >= 40 && accuracy >= 95) marks = 100;
+    else if (wpm >= 30) marks = 80;
+    else if (wpm >= 20) marks = 60;
+    const status = marks >= 60 ? "Pass" : "Fail";
+
+    toDataURL('https://i.ibb.co/GfJ0YK0F/LOGO.jpg').then(logoData => {
+      const doc = new jsPDF();
+      doc.addImage(logoData, 'jpg', 70, 20, 80, 80);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(20);
+      doc.text("PETRA COMPUTER TRAINING CENTRE", 105, 120, null, null, 'center');
+      doc.setFontSize(12);
+      doc.text("Branch Code: EMAX/EN93954", 105, 127, null, null, 'center');
+      doc.line(30, 132, 180, 132);
+
+      let y = 150;
+      const addLine = (label, value) => {
+        doc.text(`${label}:`, 30, y);
+        doc.text(String(value), 90, y);
+        y += 10;
+      };
+      addLine("Name", name);
+      addLine("Roll Number", roll);
+      addLine("Date", new Date().toLocaleString());
+      addLine("Words Typed", wordsTyped);
+      addLine("Errors", errors);
+      addLine("Accuracy", `${accuracy.toFixed(2)}%`);
+      addLine("WPM", wpm);
+      addLine("Time Taken", `${Math.min(elapsedTime, timeLimit).toFixed(1)} sec`);
+      addLine("Marks", `${marks}/100`);
+      addLine("Status", status);
+
+      doc.save(`Typing_Result_${name}_${roll}.pdf`);
+    });
+  }
+
+  function toDataURL(url) {
+    return fetch(url)
+      .then(response => response.blob())
+      .then(blob => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      }));
+  }
+
+  function showLeaderboard() {
+    const leaderboard = JSON.parse(localStorage.getItem('typing_leaderboard') || '[]');
+    leaderboardBody.innerHTML = leaderboard.map(record => `
+      <tr>
+        <td>${record.time}</td>
+        <td>${record.words}</td>
+        <td>${record.errors}</td>
+        <td>${record.accuracy}%</td>
+        <td>${record.duration}s</td>
+      </tr>`).join('');
+    overlay.style.display = 'block';
+    leaderboardModal.style.display = 'block';
+  }
+
+  function clearLeaderboard() {
+    if (confirm('Are you sure you want to clear the leaderboard?')) {
+      localStorage.removeItem('typing_leaderboard');
+      alert('Leaderboard cleared.');
+    }
+  }
+
+  function closeModals() {
+    overlay.style.display = 'none';
+    summaryModal.style.display = 'none';
+    leaderboardModal.style.display = 'none';
+  }
+
+  displayTestText('');
+function saveStudentResult(record) {
+  const name = document.getElementById('student-name').value.trim();
+  const roll = document.getElementById('roll-no').value.trim();
+  if (!name || !roll) return;
+
+  const key = 'typing_records';
+  const records = JSON.parse(localStorage.getItem(key)) || {};
+  const id = `${name}_${roll}`;
+
+  if (!records[id]) records[id] = [];
+  records[id].push(record);
+
+  localStorage.setItem(key, JSON.stringify(records));
+}
+
+// Update showSummary to include saving the result
+function showSummary() {
+  const selectedPassage = document.getElementById('passage-select').value;
+  const originalText = passages[selectedPassage];
+  const typed = inputArea.value;
+  const wordsTyped = typed.trim().split(/\s+/).filter(w => w).length;
+
+  let errors = 0;
+  for (let i = 0; i < typed.length; i++) {
+    if (typed[i] !== originalText[i]) errors++;
+  }
+
+  const accuracy = ((typed.length - errors) / typed.length) * 100 || 0;
+  const elapsedTime = (Date.now() - startTime) / 1000;
+  const wpm = elapsedTime > 0 ? Math.round((wordsTyped / elapsedTime) * 60) : 0;
+
+  summary.innerHTML = `
+    <strong>Words Typed:</strong> ${wordsTyped}<br>
+    <strong>Errors:</strong> ${errors}<br>
+    <strong>Accuracy:</strong> ${accuracy.toFixed(2)}%<br>
+    <strong>WPM:</strong> ${wpm}<br>
+    <strong>Time Taken:</strong> ${Math.min(elapsedTime, timeLimit).toFixed(1)}s
+  `;
+
+  overlay.style.display = 'block';
+  summaryModal.style.display = 'block';
+  document.getElementById('bell-sound').play();
+
+  if (accuracy >= 95 && wpm >= 40) confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
+
+  const record = {
+    time: new Date().toLocaleString(),
+    words: wordsTyped,
+    errors,
+    accuracy: parseFloat(accuracy.toFixed(2)),
+    duration: Math.min(elapsedTime, timeLimit).toFixed(1),
+    wpm
+  };
+
+  saveStudentResult(record); // Save for Admin Dashboard
+
+  const leaderboard = JSON.parse(localStorage.getItem('typing_leaderboard') || '[]');
+  leaderboard.push(record);
+  leaderboard.sort((a, b) => b.accuracy - a.accuracy || b.words - a.words || new Date(b.time) - new Date(a.time));
+  localStorage.setItem('typing_leaderboard', JSON.stringify(leaderboard));
+}
+</script>
+</body>
+</html>
