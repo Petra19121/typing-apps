@@ -483,11 +483,14 @@ function showSummary() {
   localStorage.setItem('typing_leaderboard', JSON.stringify(leaderboard));
 }
 
-// Disable copy-paste in typing area
+// Disable copy-paste and backspace in typing area
 const inputArea = document.getElementById('input-area');
 inputArea.addEventListener('paste', e => e.preventDefault());
 inputArea.addEventListener('copy', e => e.preventDefault());
 inputArea.addEventListener('cut', e => e.preventDefault());
+inputArea.addEventListener('keydown', e => {
+  if (e.key === 'Backspace') e.preventDefault();
+});
 }
 </script>
 </body>
