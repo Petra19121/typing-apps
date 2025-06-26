@@ -419,6 +419,76 @@ function showSummary() {
   leaderboard.sort((a, b) => b.accuracy - a.accuracy || b.words - a.words || new Date(b.time) - new Date(a.time));
   localStorage.setItem('typing_leaderboard', JSON.stringify(leaderboard));
 }
+  {
+// Store record in localStorage with student info
+function saveStudentResult(record) {
+  const name = document.getElementById('student-name').value.trim();
+  const roll = document.getElementById('roll-no').value.trim();
+  if (!name || !roll) return;
+
+  const key = 'typing_records';
+  const records = JSON.parse(localStorage.getItem(key)) || {};
+  const id = `${name}_${roll}`;
+
+  if (!records[id]) records[id] = [];
+  records[id].push(record);
+
+  localStorage.setItem(key, JSON.stringify(records));
+}
+
+// Update showSummary to include saving the result
+function showSummary() {
+  const selectedPassage = document.getElementById('passage-select').value;
+  const originalText = passages[selectedPassage];
+  const typed = inputArea.value;
+  const wordsTyped = typed.trim().split(/\s+/).filter(w => w).length;
+
+  let errors = 0;
+  for (let i = 0; i < typed.length; i++) {
+    if (typed[i] !== originalText[i]) errors++;
+  }
+
+  const accuracy = ((typed.length - errors) / typed.length) * 100 || 0;
+  const elapsedTime = (Date.now() - startTime) / 1000;
+  const wpm = elapsedTime > 0 ? Math.round((wordsTyped / elapsedTime) * 60) : 0;
+
+  summary.innerHTML = `
+    <strong>Words Typed:</strong> ${wordsTyped}<br>
+    <strong>Errors:</strong> ${errors}<br>
+    <strong>Accuracy:</strong> ${accuracy.toFixed(2)}%<br>
+    <strong>WPM:</strong> ${wpm}<br>
+    <strong>Time Taken:</strong> ${Math.min(elapsedTime, timeLimit).toFixed(1)}s
+  `;
+
+  overlay.style.display = 'block';
+  summaryModal.style.display = 'block';
+  document.getElementById('bell-sound').play();
+
+  if (accuracy >= 95 && wpm >= 40) confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
+
+  const record = {
+    time: new Date().toLocaleString(),
+    words: wordsTyped,
+    errors,
+    accuracy: parseFloat(accuracy.toFixed(2)),
+    duration: Math.min(elapsedTime, timeLimit).toFixed(1),
+    wpm
+  };
+
+  saveStudentResult(record); // Save for Admin Dashboard
+
+  const leaderboard = JSON.parse(localStorage.getItem('typing_leaderboard') || '[]');
+  leaderboard.push(record);
+  leaderboard.sort((a, b) => b.accuracy - a.accuracy || b.words - a.words || new Date(b.time) - new Date(a.time));
+  localStorage.setItem('typing_leaderboard', JSON.stringify(leaderboard));
+}
+
+// Disable copy-paste in typing area
+const inputArea = document.getElementById('input-area');
+inputArea.addEventListener('paste', e => e.preventDefault());
+inputArea.addEventListener('copy', e => e.preventDefault());
+inputArea.addEventListener('cut', e => e.preventDefault());
+}
 </script>
 </body>
 </html>
