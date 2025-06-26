@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard – Typing Test Results</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f4;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #ddd;
+    }
+    button {
+      margin: 5px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    #filter {
+      margin: 10px 0;
+      padding: 10px;
+      width: 100%;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<script>
+  const correctPassword = "petra2025"; // ✅ Change to your secret password
+  const input = prompt("Enter admin password:");
+  if (input !== correctPassword) {
+    alert("Access denied.");
+  }
+</script>
+<body>
+  <h1>Admin Dashboard – Student Typing Results</h1>
+  <input id="filter" placeholder="Search by student name or roll number..." oninput="filterResults()" />
+  <button onclick="downloadCSV()">⬇️ Export as CSV</button>
+  <button onclick="downloadPDF()">📄 Export as PDF</button>
+  <button onclick="clearAllResults()">🧹 Clear All Records</button>
+  <button onclick="window.location.href='typing.html'">🏠 Back to Test Page</button>
+  <table id="results-table">
+    <thead>
+      <tr>
+        <th>Student Name</th>
+        <th>Roll Number</th>
+        <th>Date & Time</th>
+        <th>Words</th>
+        <th>Errors</th>
+        <th>Accuracy</th>
+        <th>WPM</th>
+        <th>Time Taken</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    let allData = [];
+
+    function loadResults() {
+      const data = JSON.parse(localStorage.getItem('typing_records') || '{}');
+      allData = [];
+      for (const id in data) {
+        const [name, roll] = id.split('_');
+        data[id].forEach(entry => {
+          allData.push({ name, roll, ...entry });
+        });
+      }
+      renderTable(allData);
+    }
+
+    function renderTable(data) {
+      const tbody = document.querySelector('#results-table tbody');
+      tbody.innerHTML = data.map(entry => `
+        <tr>
+          <td>${entry.name}</td>
+          <td>${entry.roll}</td>
+          <td>${entry.time}</td>
+          <td>${entry.words}</td>
+          <td>${entry.errors}</td>
+          <td>${entry.accuracy}%</td>
+          <td>${entry.wpm}</td>
+          <td>${entry.duration}s</td>
+        </tr>`).join('');
+    }
+
+    function filterResults() {
+      const term = document.getElementById('filter').value.toLowerCase();
+      const filtered = allData.filter(entry =>
+        entry.name.toLowerCase().includes(term) ||
+        entry.roll.toLowerCase().includes(term)
+      );
+      renderTable(filtered);
+    }
+
+    function downloadCSV() {
+      let csv = 'Student Name,Roll Number,Date & Time,Words,Errors,Accuracy,WPM,Time Taken\n';
+      allData.forEach(entry => {
+        csv += `${entry.name},${entry.roll},${entry.time},${entry.words},${entry.errors},${entry.accuracy}%,${entry.wpm},${entry.duration}s\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Typing_Results.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(12);
+      doc.text('Typing Test Results – Admin Report', 105, 15, null, null, 'center');
+
+      let y = 25;
+      doc.setFontSize(10);
+      allData.forEach((entry, index) => {
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(`${index + 1}. ${entry.name} (${entry.roll})`, 10, y);
+        doc.text(`WPM: ${entry.wpm} | Acc: ${entry.accuracy}% | Errors: ${entry.errors} | Words: ${entry.words} | Time: ${entry.duration}s`, 10, y + 5);
+        doc.text(`Date: ${entry.time}`, 10, y + 10);
+        y += 20;
+      });
+
+      doc.save('Typing_Results.pdf');
+    }
+
+    function clearAllResults() {
+      if (confirm('Are you sure you want to clear all stored student records?')) {
+        localStorage.removeItem('typing_records');
+        loadResults();
+        alert('All records cleared.');
+      }
+    }
+
+    window.onload = loadResults;
+  </script>
+</body>
+</html>
